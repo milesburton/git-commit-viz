@@ -56,6 +56,10 @@ npm run deploy
 
 This will build the project and deploy it to the `gh-pages` branch of your repository.
 
+## Preview
+
+Once deployed (to your Github account) you can view the sample at: https://milesburton.github.io/git-commit-viz/ (replace my github with yours)
+
 ## Configuration
 
 ### Customizing the Visualization
