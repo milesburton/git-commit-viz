@@ -1,14 +1,18 @@
 import React, { useMemo } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import _ from 'lodash';
 import type { DayData, WeekData, MonthLabel, WeekdayLabel, ContributionLevel } from '@/types';
 
+interface CommitPattern {
+  probability: number;
+  maxCommits: number;
+}
+
 const contributionLevels: ContributionLevel[] = [
-  { threshold: 0, color: 'bg-gray-100', label: 'No contributions' },
-  { threshold: 1, color: 'bg-green-100', label: 'Low contributions' },
-  { threshold: 3, color: 'bg-green-300', label: 'Medium contributions' },
-  { threshold: 5, color: 'bg-green-500', label: 'High contributions' },
-  { threshold: 7, color: 'bg-green-700', label: 'Very high contributions' },
+  { threshold: 0, color: 'bg-zinc-100', label: 'No contributions' },
+  { threshold: 1, color: 'bg-emerald-100', label: 'Low contributions' },
+  { threshold: 3, color: 'bg-emerald-300', label: 'Medium contributions' },
+  { threshold: 5, color: 'bg-emerald-500', label: 'High contributions' },
+  { threshold: 7, color: 'bg-emerald-700', label: 'Very high contributions' },
 ];
 
 const monthLabels: MonthLabel[] = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -20,28 +24,28 @@ const generateRandomCommits = (): string[] => {
   const startDate = new Date(now);
   startDate.setDate(startDate.getDate() - 365); // Go back one year
 
-  // Generate different patterns of activity
-  const patterns = [
+  const patterns: CommitPattern[] = [
     { probability: 0.8, maxCommits: 8 },  // Weekdays (Mon-Fri)
     { probability: 0.3, maxCommits: 3 },  // Weekends
     { probability: 0.95, maxCommits: 12 }, // Random "busy" days
   ];
 
   let currentDate = new Date(startDate);
+  
   while (currentDate <= now) {
     const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
-    const pattern = isWeekend ? patterns[1] : patterns[0];
+    const weekdayPattern = patterns[0] ?? { probability: 0.8, maxCommits: 8 };
+    const weekendPattern = patterns[1] ?? { probability: 0.3, maxCommits: 3 };
+    const busyPattern = patterns[2] ?? { probability: 0.95, maxCommits: 12 };
     
-    // Randomly decide if this is a "busy" day
+    const defaultPattern = isWeekend ? weekendPattern : weekdayPattern;
     const isBusyDay = Math.random() < 0.1;
-    const activePattern = isBusyDay ? patterns[2] : pattern;
+    const activePattern = isBusyDay ? busyPattern : defaultPattern;
 
     if (Math.random() < activePattern.probability) {
-      // Generate 1 to maxCommits commits for this day
       const numCommits = Math.floor(Math.random() * activePattern.maxCommits) + 1;
       
       for (let i = 0; i < numCommits; i++) {
-        // Generate random time between 9 AM and 10 PM
         const hours = Math.floor(Math.random() * 13) + 9;
         const minutes = Math.floor(Math.random() * 60);
         const seconds = Math.floor(Math.random() * 60);
@@ -63,21 +67,17 @@ const ContributionHeatmap: React.FC = () => {
   const commitData = useMemo(() => generateRandomCommits(), []);
 
   const data = useMemo<WeekData[]>(() => {
-    // Normalize dates to handle different timezones
     const normalizedCommits = commitData.map((commit: string): string => {
       const date = new Date(commit);
       return date.toISOString().split('T')[0] ?? '';
     }).filter(Boolean);
 
-    // Group commits by date
     const commitsByDate: Record<string, string[]> = _.groupBy(normalizedCommits);
     
-    // Get date range
-    const endDate = new Date(); // Today
+    const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 371); // Go back 53 weeks
+    startDate.setDate(startDate.getDate() - 371);
     
-    // Create array of all dates in range
     const allDates: DayData[] = [];
     const currentDate = new Date(startDate);
     
@@ -99,7 +99,6 @@ const ContributionHeatmap: React.FC = () => {
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
-    // Group by weeks
     return _.chunk(allDates, 7) as WeekData[];
   }, [commitData]);
 
@@ -109,7 +108,7 @@ const ContributionHeatmap: React.FC = () => {
       .reverse()
       .find(level => count >= level.threshold);
     
-    return level?.color ?? contributionLevels[0]?.color ?? 'bg-gray-100';
+    return level?.color ?? contributionLevels[0]?.color ?? 'bg-zinc-100';
   };
 
   const totalContributions = useMemo(() => 
@@ -117,12 +116,12 @@ const ContributionHeatmap: React.FC = () => {
   , [data]);
 
   return (
-    <Card className="w-full max-w-5xl">
-      <CardHeader>
-        <CardTitle>Contribution Activity</CardTitle>
-        <p className="text-sm text-gray-600">{totalContributions} contributions in the last year</p>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-lg border bg-white p-6 shadow-sm">
+      <div className="mb-6">
+        <h3 className="text-2xl font-semibold text-gray-900">Contribution Activity</h3>
+        <p className="mt-2 text-sm text-gray-600">{totalContributions} contributions in the last year</p>
+      </div>
+      <div>
         <div className="flex flex-col">
           <div className="flex gap-1">
             <div className="w-8" />
@@ -160,8 +159,8 @@ const ContributionHeatmap: React.FC = () => {
           ))}
           <span>More</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
