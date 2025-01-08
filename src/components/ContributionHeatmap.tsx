@@ -18,17 +18,18 @@ const ContributionHeatmap: React.FC = () => {
   const commitData = [
     '2025-01-07 16:58:25 +0000',
     '2025-01-07 12:16:14 +0000',
+    // ... rest of your commit data
   ];
 
   const data = useMemo<WeekData[]>(() => {
     // Normalize dates to handle different timezones
-    const normalizedCommits = commitData.map((commit): string => {
+    const normalizedCommits = commitData.map((commit: string): string => {
       const date = new Date(commit);
-      return date.toISOString().split('T')[0];
-    });
+      return date.toISOString().split('T')[0] ?? '';
+    }).filter(Boolean);
 
     // Group commits by date
-    const commitsByDate = _.groupBy(normalizedCommits);
+    const commitsByDate: Record<string, string[]> = _.groupBy(normalizedCommits);
     
     // Get date range
     const endDate = new Date(); // Today
@@ -41,22 +42,24 @@ const ContributionHeatmap: React.FC = () => {
     
     while (currentDate <= endDate) {
       const dateStr = currentDate.toISOString().split('T')[0];
-      const commits = commitsByDate[dateStr] || [];
+      if (!dateStr) continue;
+
+      const dateCommits = commitsByDate[dateStr] ?? [];
       
       allDates.push({
         date: dateStr,
-        count: commits.length,
+        count: dateCommits.length,
         weekday: currentDate.getDay(),
-        commits: commits.map(commit => ({
+        commits: dateCommits.map(commit => ({
           timestamp: commit,
-          timezone: commit.split(' ')[2]
+          timezone: commit.split(' ')[2] ?? '+0000'
         }))
       });
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
     // Group by weeks
-    return _.chunk(allDates, 7);
+    return _.chunk(allDates, 7) as WeekData[];
   }, [commitData]);
 
   const getColor = (count: number): string => {
@@ -65,7 +68,7 @@ const ContributionHeatmap: React.FC = () => {
       .reverse()
       .find(level => count >= level.threshold);
     
-    return level?.color ?? contributionLevels[0].color;
+    return level?.color ?? contributionLevels[0]?.color ?? 'bg-gray-100';
   };
 
   return (
