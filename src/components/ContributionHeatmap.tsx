@@ -14,12 +14,53 @@ const contributionLevels: ContributionLevel[] = [
 const monthLabels: MonthLabel[] = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const weekdayLabels: WeekdayLabel[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const ContributionHeatmap: React.FC = () => {
-  const commitData = [
-    '2025-01-07 16:58:25 +0000',
-    '2025-01-07 12:16:14 +0000',
-    // ... rest of your commit data
+const generateRandomCommits = (): string[] => {
+  const commits: string[] = [];
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setDate(startDate.getDate() - 365); // Go back one year
+
+  // Generate different patterns of activity
+  const patterns = [
+    { probability: 0.8, maxCommits: 8 },  // Weekdays (Mon-Fri)
+    { probability: 0.3, maxCommits: 3 },  // Weekends
+    { probability: 0.95, maxCommits: 12 }, // Random "busy" days
   ];
+
+  let currentDate = new Date(startDate);
+  while (currentDate <= now) {
+    const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
+    const pattern = isWeekend ? patterns[1] : patterns[0];
+    
+    // Randomly decide if this is a "busy" day
+    const isBusyDay = Math.random() < 0.1;
+    const activePattern = isBusyDay ? patterns[2] : pattern;
+
+    if (Math.random() < activePattern.probability) {
+      // Generate 1 to maxCommits commits for this day
+      const numCommits = Math.floor(Math.random() * activePattern.maxCommits) + 1;
+      
+      for (let i = 0; i < numCommits; i++) {
+        // Generate random time between 9 AM and 10 PM
+        const hours = Math.floor(Math.random() * 13) + 9;
+        const minutes = Math.floor(Math.random() * 60);
+        const seconds = Math.floor(Math.random() * 60);
+        
+        const commitDate = new Date(currentDate);
+        commitDate.setHours(hours, minutes, seconds);
+        
+        commits.push(commitDate.toISOString().replace('T', ' ').slice(0, -5) + ' +0000');
+      }
+    }
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return commits.sort();
+};
+
+const ContributionHeatmap: React.FC = () => {
+  const commitData = useMemo(() => generateRandomCommits(), []);
 
   const data = useMemo<WeekData[]>(() => {
     // Normalize dates to handle different timezones
@@ -71,10 +112,15 @@ const ContributionHeatmap: React.FC = () => {
     return level?.color ?? contributionLevels[0]?.color ?? 'bg-gray-100';
   };
 
+  const totalContributions = useMemo(() => 
+    data.flat().reduce((sum, day) => sum + day.count, 0)
+  , [data]);
+
   return (
     <Card className="w-full max-w-5xl">
       <CardHeader>
         <CardTitle>Contribution Activity</CardTitle>
+        <p className="text-sm text-gray-600">{totalContributions} contributions in the last year</p>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col">
